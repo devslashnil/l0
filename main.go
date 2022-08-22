@@ -52,7 +52,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Got invalid data order from pub")
 			return
 		}
-		err = order.Create()
+		err = order.Create(conn)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Unable to create order_uid: %v", order.OrderUid)
 			return
@@ -82,7 +82,111 @@ func getOrderByUid(uid string) (Order, error) {
 	return Order{}, nil
 }
 
-func (o Order) Create() error {
+func (o Order) Create(conn *pgx.Conn) error {
+	query := "CALL add_order($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);"
+	err := conn.QueryRow(
+		context.Background(),
+		query,
+		o.OrderUid,
+		o.TrackNumber,
+		o.Entry,
+		o.Locale,
+		o.InternalSignature,
+		o.CustomerId,
+		o.DeliveryService,
+		o.Shardkey,
+		o.SmId,
+		o.DateCreated,
+		o.OofShard,
+	).Scan()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
+		return err
+	}
+	err = o.Delivery.Create(conn, o.OrderUid)
+	if err != nil {
+		return err
+	}
+	err = o.Payment.Create(conn, o.OrderUid)
+	if err != nil {
+		return err
+	}
+	for _, item := range o.Items {
+		err = item.Create(conn, o.OrderUid)
+		if err != nil {
+			return err
+		}
+	}
+	// TODO: do rollback on error
+	return nil
+}
+
+func (d Delivery) Create(conn *pgx.Conn, OrderUid string) error {
+	query := "CALL add_payment($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);"
+	err := conn.QueryRow(
+		context.Background(),
+		query,
+		OrderUid,
+		d.Name,
+		d.Phone,
+		d.Zip,
+		d.City,
+		d.Address,
+		d.Region,
+		d.Email,
+	).Scan()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
+		return err
+	}
+	return nil
+}
+
+func (i Item) Create(conn *pgx.Conn, OrderUid string) error {
+	query := "CALL add_order_item($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);"
+	err := conn.QueryRow(
+		context.Background(),
+		query,
+		OrderUid,
+		i.Sale,
+		i.ChrtId,
+		i.TrackNumber,
+		i.Price,
+		i.Rid,
+		i.Name,
+		i.TotalPrice,
+		i.NmId,
+		i.Brand,
+		i.Status,
+	).Scan()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
+		return err
+	}
+	return nil
+}
+
+func (p Payment) Create(conn *pgx.Conn, OrderUid string) error {
+	query := "CALL add_payment($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
+	err := conn.QueryRow(
+		context.Background(),
+		query,
+		p.Transaction,
+		OrderUid,
+		p.RequestId,
+		p.Currency,
+		p.Provider,
+		p.Amount,
+		p.PaymentDt,
+		p.Bank,
+		p.DeliveryCost,
+		p.GoodsTotal,
+		p.CustomFee,
+	).Scan()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
+		return err
+	}
 	return nil
 }
 
@@ -92,7 +196,7 @@ type Order struct {
 	Entry             string    `json:"entry"`
 	Delivery          Delivery  `json:"delivery"`
 	Payment           Payment   `json:"payment"`
-	Items             []Items   `json:"items"`
+	Items             []Item    `json:"items"`
 	Locale            string    `json:"locale"`
 	InternalSignature string    `json:"internal_signature"`
 	CustomerId        string    `json:"customer_id"`
@@ -126,7 +230,7 @@ type Delivery struct {
 	Email   string `json:"email"`
 }
 
-type Items struct {
+type Item struct {
 	ChrtId      int    `json:"chrt_id"`
 	TrackNumber string `json:"track_number"`
 	Price       int    `json:"price"`
