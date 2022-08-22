@@ -10,28 +10,7 @@ CREATE TABLE IF NOT EXISTS orders (
     sm_id INTEGER,
     date_created TIMESTAMP,
     oof_shard VARCHAR(255)
-    );
-
--- could be composite primary key sql
-CREATE TABLE IF NOT EXISTS item (
-    chrt_id INTEGER PRIMARY KEY,
-    track_number VARCHAR(255),
-    price INTEGER,
-    rid VARCHAR(255),
-    name VARCHAR(255),
-    size VARCHAR(255),
-    total_price INTEGER,
-    nm_id INTEGER,
-    brand VARCHAR(255),
-    status INTEGER
 );
-
-CREATE TABLE IF NOT EXISTS order_item (
-    id SERIAL PRIMARY KEY,
-    order_uid VARCHAR(255) REFERENCES orders(order_uid) ON DELETE CASCADE,
-    chrt_id INTEGER REFERENCES item(chrt_id) ON DELETE CASCADE,
-    sale INTEGER
-    );
 
 CREATE TABLE IF NOT EXISTS delivery (
     id SERIAL PRIMARY KEY,
@@ -57,7 +36,28 @@ CREATE TABLE IF NOT EXISTS payment (
     delivery_cost INTEGER,
     goods_total INTEGER,
     custom_fee INTEGER
-    );
+);
+
+-- could be composite primary key sql
+CREATE TABLE IF NOT EXISTS item (
+    chrt_id INTEGER PRIMARY KEY,
+    track_number VARCHAR(255),
+    price INTEGER,
+    rid VARCHAR(255),
+    name VARCHAR(255),
+    size VARCHAR(255),
+    total_price INTEGER,
+    nm_id INTEGER,
+    brand VARCHAR(255),
+    status INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS order_item (
+    id SERIAL PRIMARY KEY,
+    order_uid VARCHAR(255) REFERENCES orders(order_uid) ON DELETE CASCADE,
+    chrt_id INTEGER REFERENCES item(chrt_id) ON DELETE CASCADE,
+    sale INTEGER
+);
 
 CREATE OR REPLACE PROCEDURE add_order(
     order_uid VARCHAR(255),
@@ -78,6 +78,44 @@ BEGIN
     INSERT INTO orders
     VALUES (order_uid, track_number, entry, locale, internal_signature, customer_id,
             delivery_service, shardkey, sm_id, date_created, oof_shard);
+END$$;
+
+CREATE OR REPLACE PROCEDURE add_delivery(
+    order_uid VARCHAR(255),
+    name VARCHAR(255),
+    phone VARCHAR(255),
+    zip VARCHAR(255),
+    city VARCHAR(255),
+    address VARCHAR(255),
+    region VARCHAR(255),
+    email VARCHAR(255)
+)
+    LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO delivery
+    VALUES (order_uid, name, phone, zip, city, address, region, email);
+END$$;
+
+CREATE OR REPLACE PROCEDURE add_payment(
+    transaction VARCHAR(255),
+    order_uid VARCHAR(255),
+    request_id VARCHAR(255),
+    currency VARCHAR(255),
+    provider VARCHAR(255),
+    amount INTEGER,
+    payment_dt INTEGER,
+    bank VARCHAR(255),
+    delivery_cost INTEGER,
+    goods_total INTEGER,
+    custom_fee INTEGER
+)
+    LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO payment
+    VALUES (transaction, order_uid, request_id, currency, provider, amount, payment_dt, bank,
+            delivery_cost, goods_total, custom_fee);
 END$$;
 
 CREATE OR REPLACE PROCEDURE add_order_item(
@@ -106,70 +144,27 @@ BEGIN
     ON CONFLICT DO NOTHING;
 END$$;
 
-CREATE OR REPLACE PROCEDURE add_delivery(
-    order_uid VARCHAR(255),
-    name VARCHAR(255),
-    phone VARCHAR(255),
-    zip VARCHAR(255),
-    city VARCHAR(255),
-    address VARCHAR(255),
-    region VARCHAR(255),
-    email VARCHAR(255)
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    INSERT INTO delivery
-    VALUES (order_uid, name, phone, zip, city, address, region, email);
-END$$;
-
-CREATE OR REPLACE PROCEDURE add_payment(
-    transaction VARCHAR(255),
-    order_uid VARCHAR(255),
-    request_id VARCHAR(255),
-    currency VARCHAR(255),
-    provider VARCHAR(255),
-    amount INTEGER,
-    payment_dt INTEGER,
-    bank VARCHAR(255),
-    delivery_cost INTEGER,
-    goods_total INTEGER,
-    custom_fee INTEGER
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    INSERT INTO payment
-    VALUES (transaction, order_uid, request_id, currency, provider, amount, payment_dt, bank,
-            delivery_cost, goods_total, custom_fee);
-END$$;
-
-CREATE OR REPLACE PROCEDURE add_payment(
-    transaction VARCHAR(255),
-    order_uid VARCHAR(255),
-    request_id VARCHAR(255),
-    currency VARCHAR(255),
-    provider VARCHAR(255),
-    amount INTEGER,
-    payment_dt INTEGER,
-    bank VARCHAR(255),
-    delivery_cost INTEGER,
-    goods_total INTEGER,
-    custom_fee INTEGER
-)
+CREATE OR REPLACE PROCEDURE get_order(uid VARCHAR(255))
     LANGUAGE plpgsql
 AS $$
 BEGIN
-    INSERT INTO payment
-    VALUES (transaction, order_uid, request_id, currency, provider, amount, payment_dt, bank,
-            delivery_cost, goods_total, custom_fee);
-END$$;
-
-CREATE OR REPLACE PROCEDURE get_order(order_uid VARCHAR(255))
-    LANGUAGE plpgsql
-AS $$
-BEGIN
-    INSERT INTO payment
-    VALUES (transaction, order_uid, request_id, currency, provider, amount, payment_dt, bank,
-            delivery_cost, goods_total, custom_fee);
+    SELECT
+        json_build_object(
+            orders.*,
+            'delivery', to_json(delivery.*),
+            'payment', to_json(payment.*),
+            'items', (SELECT json_agg(order_items.*)
+                      FROM (SELECT item.*, order_item.sale
+                            FROM order_item,
+                                 item
+                            WHERE order_item.order_uid = uid
+                              AND order_item.chrt_id = item.chrt_id) as order_items)
+        )
+    FROM orders,
+         payment,
+         delivery
+    WHERE orders.order_uid = uid AND
+          delivery.order_uid = uid AND
+          payment.order_uid = uid
+    LIMIT 1;
 END$$;
