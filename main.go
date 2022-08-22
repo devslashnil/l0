@@ -2,12 +2,16 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log"
+	"net/http"
 	"os"
 	"time"
 
 	"github.com/jackc/pgx/v4"
 	"github.com/nats-io/stan.go"
+	"github.com/patrickmn/go-cache"
 )
 
 // hardcode is bad, but in the task it's convenient for all...
@@ -19,6 +23,9 @@ const (
 	dbname   = "postgres"
 )
 
+// TODO: find a way to return whole data at one procedure
+// TODO: find a way to insert whole json at one procedure
+
 func main() {
 	urlDb := fmt.Sprintf("postgres://%v:%v@%v:%v/%v", username,
 		password, host, port, dbname)
@@ -29,12 +36,54 @@ func main() {
 	}
 	defer conn.Close(context.Background())
 
-	sc, err := stan.Connect("test-cluster", "pub")
+	sc, err := stan.Connect("test-cluster", "sub-order")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to nats-streaming-server: %v\n", err)
 		os.Exit(1)
 	}
 	defer sc.Close()
+
+	c := cache.New(5*time.Minute, 10*time.Minute)
+
+	sc.Subscribe("pub-order", func(m *stan.Msg) {
+		var order Order
+		err = json.Unmarshal(m.Data, &order)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Got invalid data order from pub")
+			return
+		}
+		err = order.Create()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to create order_uid: %v", order.OrderUid)
+			return
+		}
+		c.Set(order.OrderUid, string(m.Data), cache.DefaultExpiration)
+		fmt.Fprintf(os.Stdout, "Next order_uid saved to cache: %v", order.OrderUid)
+	})
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		orderUid := r.URL.Query().Get("order_uid")
+		order, err := getOrderByUid(orderUid)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to retrive order by uid: %v", orderUid)
+			return
+		}
+		fmt.Fprintf(w, "%v", order)
+	})
+
+	fmt.Printf("Starting server at port 8080\n")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Fatal(err)
+	}
+
+}
+
+func getOrderByUid(uid string) (Order, error) {
+	return Order{}, nil
+}
+
+func (o Order) Create() error {
+	return nil
 }
 
 type Order struct {
