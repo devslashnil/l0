@@ -63,7 +63,7 @@ func main() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		orderUid := r.URL.Query().Get("order_uid")
-		order, err := getOrderByUid(orderUid)
+		order, err := getOrder(conn, orderUid)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to retrive order by uid: %v", orderUid)
 			return
@@ -76,10 +76,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-}
-
-func getOrderByUid(uid string) (Order, error) {
-	return Order{}, nil
 }
 
 func (o Order) Create(conn *pgx.Conn) error {
@@ -188,6 +184,17 @@ func (p Payment) Create(conn *pgx.Conn, OrderUid string) error {
 		return err
 	}
 	return nil
+}
+
+func getOrder(conn *pgx.Conn, uid string) (Order, error) {
+	var order Order
+	query := "CALL get_order( $1 );"
+	err := conn.QueryRow(context.Background(), query, uid).Scan(&order)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
+		return order, err
+	}
+	return order, nil
 }
 
 type Order struct {
