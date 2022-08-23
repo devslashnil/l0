@@ -44,6 +44,15 @@ func main() {
 	defer sc.Close()
 
 	c := cache.New(5*time.Minute, 10*time.Minute)
+	// load cache
+	orders, err := getAllOrders(conn)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Can't get all orders: %v", err)
+	}
+	for _, order := range orders {
+		c.Set(order.OrderUid, order, cache.DefaultExpiration)
+	}
+	fmt.Fprintf(os.Stdout, "Cache recovered")
 
 	sc.Subscribe("pub-order", func(m *stan.Msg) {
 		var order Order
@@ -61,18 +70,27 @@ func main() {
 		fmt.Fprintf(os.Stdout, "Next order_uid saved to cache: %v", order.OrderUid)
 	})
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		orderUid := r.URL.Query().Get("order_uid")
-		order, err := getOrder(conn, orderUid)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to retrive order by uid: %v", orderUid)
+		order, ok := c.Get(orderUid)
+		if ok {
+			fmt.Fprintf(w, "%v", order)
 			return
 		}
-		fmt.Fprintf(w, "%v", order)
+		order, err = getOrder(conn, orderUid)
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+
+		c.Set(orderUid, order, cache.DefaultExpiration)
 	})
 
 	fmt.Printf("Starting server at port 8080\n")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	if err := http.ListenAndServe(":8080", mux); err != nil {
 		log.Fatal(err)
 	}
 
@@ -195,6 +213,25 @@ func getOrder(conn *pgx.Conn, uid string) (Order, error) {
 		return order, err
 	}
 	return order, nil
+}
+
+func getAllOrders(conn *pgx.Conn) ([]Order, error) {
+	query := "CALL get_all_orders();"
+	rows, err := conn.Query(context.Background(), query)
+	orders := make([]Order, 0)
+	for rows.Next() {
+		var order Order
+		if err = rows.Scan(&order); err != nil {
+			fmt.Fprintf(os.Stderr, "Query Scan failed: %v\n", err)
+			return orders, err
+		}
+		orders = append(orders, order)
+	}
+	if err = rows.Err(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error from iterating over rows: %v\n", err)
+		return orders, err
+	}
+	return orders, nil
 }
 
 type Order struct {

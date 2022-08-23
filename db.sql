@@ -168,3 +168,26 @@ BEGIN
           payment.order_uid = uid
     LIMIT 1;
 END$$;
+
+CREATE OR REPLACE PROCEDURE get_all_orders()
+    LANGUAGE plpgsql
+AS $$
+BEGIN
+    SELECT
+        json_agg(
+            json_build_object(
+                orders.*,
+                'delivery', to_json(delivery.*),
+                'payment', to_json(payment.*),
+                'items', (SELECT json_agg(order_items.*)
+                          FROM (SELECT item.*, order_item.sale
+                                FROM order_item,
+                                     item
+                                WHERE order_item.order_uid = orders.order_uid
+                                  AND order_item.chrt_id = item.chrt_id) as order_items)
+            )
+        )
+    FROM orders,
+         payment,
+         delivery;
+END$$;
