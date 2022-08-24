@@ -85,7 +85,10 @@ func main() {
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-
+		http.ServeFile(w, r, "index.html")
+		//w.Header().Set("Content-Type", "application/json")
+		//w.WriteHeader(http.StatusCreated)
+		//json.NewEncoder(w).Encode(order)
 		c.Set(orderUid, order, cache.DefaultExpiration)
 	})
 
