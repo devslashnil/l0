@@ -39,16 +39,23 @@ func main() {
 		select {
 		case <-ticker.C:
 			fmt.Println("foo publish")
-			err = sc.Publish("foo", file)
+			b, err := json.Marshal(orders[i])
 			if err != nil {
 				log.Fatalln(err)
+			}
+			err = sc.Publish("foo", b)
+			if err != nil {
+				log.Fatalln(err)
+			}
+			i++
+			if i >= msgNum {
+				quit <- struct{}{}
 			}
 		case <-quit:
 			ticker.Stop()
 			return
 		}
 	}
-	fmt.Println("end")
 }
 
 func populateOrders(template Order, l int) []Order {
