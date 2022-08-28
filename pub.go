@@ -44,7 +44,7 @@ func main() {
 func populateOrders(template Order, len int) []Order {
 	orders := make([]Order, 0)
 	for i := 0; i < len; i++ {
-		order := template
+		order := mutate(template)
 
 		payment := template.Payment
 		delivery := template.Delivery
@@ -53,25 +53,17 @@ func populateOrders(template Order, len int) []Order {
 	return orders
 }
 
-// Mutate mutate a struct, where a - pointer
-func Mutate(a any) {
-	v := reflect.Indirect(reflect.ValueOf(a))
-	fmt.Printf("%v\n", v)
+// mutate change a struct values
+func mutate(a any, num int) any {
+	v := reflect.ValueOf(a)
 	for i := 0; i < v.NumField(); i++ {
 		field := v.Field(i)
 		switch prop := field.Interface().(type) {
 		case int:
 			field.SetInt(int64(prop + rand.Intn(100)))
 		case string:
-			// todo: replace i on j
-			field.SetString(fmt.Sprintf("test-data-%d:%v", i, field.String()))
-		case []Item:
-			fmt.Println("array")
-		default:
-			//fmt.Printf("prop %v\n", prop)
-			l := reflect.Indirect(reflect.ValueOf(&prop)).Elem() //.NumField()
-			fmt.Printf("l %v\n", l)
-			//Mutate(&prop)
+			field.SetString(fmt.Sprintf("test-data-%d:%v", num, field.String()))
 		}
 	}
+	return a
 }
