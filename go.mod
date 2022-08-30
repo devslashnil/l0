@@ -6,6 +6,7 @@ require (
 	github.com/jackc/pgx/v4 v4.17.0
 	github.com/nats-io/stan.go v0.10.3
 	github.com/patrickmn/go-cache v2.1.0+incompatible
+	//github.com/devslashnil/l0/iternal/model v1.0.0
 )
 
 require (
@@ -28,3 +29,7 @@ require (
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 )
+
+//replace (
+//	github.com/devslashnil/l0/iternal/model => ./internal/model
+//)

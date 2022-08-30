@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"l0/iternal/model"
 	"log"
 	"net/http"
 	"os"
@@ -23,9 +24,6 @@ const (
 	dbname   = "postgres"
 )
 
-// TODO: find a way to return whole data at one procedure
-// TODO: find a way to insert whole json at one procedure
-
 func main() {
 	urlDb := fmt.Sprintf("postgres://%v:%v@%v:%v/%v", username,
 		password, host, port, dbname)
@@ -36,7 +34,7 @@ func main() {
 	}
 	defer conn.Close(context.Background())
 
-	sc, err := stan.Connect("test-cluster", "sub-order")
+	sc, err := stan.Connect("test-cluster", "order-sub")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to nats-streaming-server: %v\n", err)
 		os.Exit(1)
@@ -45,23 +43,24 @@ func main() {
 
 	c := cache.New(5*time.Minute, 10*time.Minute)
 	// load cache
-	orders, err := getAllOrders(conn)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Can't get all orders: %v", err)
-	}
-	for _, order := range orders {
-		c.Set(order.OrderUid, order, cache.DefaultExpiration)
-	}
-	fmt.Fprintf(os.Stdout, "Cache recovered")
+	//orders, err := getAllOrders(conn)
+	//if err != nil {
+	//	fmt.Fprintf(os.Stderr, "Can't get all orders: %v", err)
+	//}
+	//for _, order := range orders {
+	//	c.Set(order.OrderUid, order, cache.DefaultExpiration)
+	//}
+	fmt.Fprintf(os.Stdout, "Cache recovered\n")
 
-	sc.Subscribe("pub-order", func(m *stan.Msg) {
-		var order Order
+	sc.Subscribe("order", func(m *stan.Msg) {
+		fmt.Printf("got message: %s", m.Data)
+		var order model.Order
 		err = json.Unmarshal(m.Data, &order)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Got invalid data order from pub")
 			return
 		}
-		err = order.Create(conn)
+		err = Create(order, conn)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Unable to create order_uid: %v", order.OrderUid)
 			return
@@ -99,7 +98,8 @@ func main() {
 
 }
 
-func (o Order) Create(conn *pgx.Conn) error {
+func Create(o model.Order, conn *pgx.Conn) error {
+	fmt.Printf("Creating stuff: %v\n", o)
 	query := "CALL add_order($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);"
 	err := conn.QueryRow(
 		context.Background(),
@@ -120,16 +120,16 @@ func (o Order) Create(conn *pgx.Conn) error {
 		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
 		return err
 	}
-	err = o.Delivery.Create(conn, o.OrderUid)
+	err = CreateDelivery(o.Delivery, conn, o.OrderUid)
 	if err != nil {
 		return err
 	}
-	err = o.Payment.Create(conn, o.OrderUid)
+	err = CreatePayment(o.Payment, conn, o.OrderUid)
 	if err != nil {
 		return err
 	}
 	for _, item := range o.Items {
-		err = item.Create(conn, o.OrderUid)
+		err = CreateItem(item, conn, o.OrderUid)
 		if err != nil {
 			return err
 		}
@@ -138,7 +138,7 @@ func (o Order) Create(conn *pgx.Conn) error {
 	return nil
 }
 
-func (d Delivery) Create(conn *pgx.Conn, OrderUid string) error {
+func CreateDelivery(d model.Delivery, conn *pgx.Conn, OrderUid string) error {
 	query := "CALL add_payment($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);"
 	err := conn.QueryRow(
 		context.Background(),
@@ -159,7 +159,7 @@ func (d Delivery) Create(conn *pgx.Conn, OrderUid string) error {
 	return nil
 }
 
-func (i Item) Create(conn *pgx.Conn, OrderUid string) error {
+func CreateItem(i model.Item, conn *pgx.Conn, OrderUid string) error {
 	query := "CALL add_order_item($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);"
 	err := conn.QueryRow(
 		context.Background(),
@@ -183,7 +183,7 @@ func (i Item) Create(conn *pgx.Conn, OrderUid string) error {
 	return nil
 }
 
-func (p Payment) Create(conn *pgx.Conn, OrderUid string) error {
+func CreatePayment(p model.Payment, conn *pgx.Conn, OrderUid string) error {
 	query := "CALL add_payment($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
 	err := conn.QueryRow(
 		context.Background(),
@@ -207,8 +207,8 @@ func (p Payment) Create(conn *pgx.Conn, OrderUid string) error {
 	return nil
 }
 
-func getOrder(conn *pgx.Conn, uid string) (Order, error) {
-	var order Order
+func getOrder(conn *pgx.Conn, uid string) (model.Order, error) {
+	var order model.Order
 	query := "CALL get_order( $1 );"
 	err := conn.QueryRow(context.Background(), query, uid).Scan(&order)
 	if err != nil {
@@ -218,12 +218,15 @@ func getOrder(conn *pgx.Conn, uid string) (Order, error) {
 	return order, nil
 }
 
-func getAllOrders(conn *pgx.Conn) ([]Order, error) {
+func getAllOrders(conn *pgx.Conn) ([]model.Order, error) {
 	query := "CALL get_all_orders();"
 	rows, err := conn.Query(context.Background(), query)
-	orders := make([]Order, 0)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "get_all_orders failed: %v\n", err)
+	}
+	orders := make([]model.Order, 0)
 	for rows.Next() {
-		var order Order
+		var order model.Order
 		if err = rows.Scan(&order); err != nil {
 			fmt.Fprintf(os.Stderr, "Query Scan failed: %v\n", err)
 			return orders, err
@@ -235,58 +238,4 @@ func getAllOrders(conn *pgx.Conn) ([]Order, error) {
 		return orders, err
 	}
 	return orders, nil
-}
-
-type Order struct {
-	OrderUid          string    `json:"order_uid"`
-	TrackNumber       string    `json:"track_number"`
-	Entry             string    `json:"entry"`
-	Delivery          Delivery  `json:"delivery"`
-	Payment           Payment   `json:"payment"`
-	Items             []Item    `json:"items"`
-	Locale            string    `json:"locale"`
-	InternalSignature string    `json:"internal_signature"`
-	CustomerId        string    `json:"customer_id"`
-	DeliveryService   string    `json:"delivery_service"`
-	Shardkey          string    `json:"shardkey"`
-	SmId              int       `json:"sm_id"`
-	DateCreated       time.Time `json:"date_created"`
-	OofShard          string    `json:"oof_shard"`
-}
-
-type Payment struct {
-	Transaction  string `json:"transaction"`
-	RequestId    string `json:"request_id"`
-	Currency     string `json:"currency"`
-	Provider     string `json:"provider"`
-	Amount       int    `json:"amount"`
-	PaymentDt    int    `json:"payment_dt"`
-	Bank         string `json:"bank"`
-	DeliveryCost int    `json:"delivery_cost"`
-	GoodsTotal   int    `json:"goods_total"`
-	CustomFee    int    `json:"custom_fee"`
-}
-
-type Delivery struct {
-	Name    string `json:"name"`
-	Phone   string `json:"phone"`
-	Zip     string `json:"zip"`
-	City    string `json:"city"`
-	Address string `json:"address"`
-	Region  string `json:"region"`
-	Email   string `json:"email"`
-}
-
-type Item struct {
-	ChrtId      int    `json:"chrt_id"`
-	TrackNumber string `json:"track_number"`
-	Price       int    `json:"price"`
-	Rid         string `json:"rid"`
-	Name        string `json:"name"`
-	Sale        int    `json:"sale"`
-	Size        string `json:"size"`
-	TotalPrice  int    `json:"total_price"`
-	NmId        int    `json:"nm_id"`
-	Brand       string `json:"brand"`
-	Status      int    `json:"status"`
 }

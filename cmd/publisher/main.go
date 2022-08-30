@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"l0/iternal/model"
 	"log"
 	"math/rand"
 	"os"
@@ -13,11 +14,13 @@ import (
 )
 
 const (
-	msgNum = 10
+	msgNum = 100
+	msgLag = 5 // Sec
 )
 
 func main() {
-	sc, err := stan.Connect("test-cluster", "pub-order")
+	fmt.Println("Publisher init")
+	sc, err := stan.Connect("test-cluster", "order-publish")
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -25,25 +28,28 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	var order Order
+	var order model.Order
 	err = json.Unmarshal(file, &order)
+	fmt.Printf("Unmarshal results: %s\n%v", order, order)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	// Tick return
 	orders := populateOrders(order, msgNum)
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(msgLag * time.Second)
 	quit := make(chan struct{})
 	i := 0
+	fmt.Println("1st tick in progress")
 	for {
 		select {
 		case <-ticker.C:
-			fmt.Println("foo publish")
+			fmt.Printf("foo publish: %d\n", i)
 			b, err := json.Marshal(orders[i])
+			fmt.Printf("json.Marshal(orders[i]): %s\n%v", b, orders[i])
 			if err != nil {
 				log.Fatalln(err)
 			}
-			err = sc.Publish("foo", b)
+			err = sc.Publish("order", b)
 			if err != nil {
 				log.Fatalln(err)
 			}
@@ -58,13 +64,15 @@ func main() {
 	}
 }
 
-func populateOrders(template Order, l int) []Order {
-	orders := make([]Order, l)
+func populateOrders(template model.Order, l int) []model.Order {
+	orders := make([]model.Order, 0, l)
 	for i := 0; i < l; i++ {
-		order := mutate(&template, i)
+		order := template
+		order = mutate(&order, i)
+		order.OrderUid = fmt.Sprintf("%d-i-%v", i, template.OrderUid)
 		payment := template.Payment
 		order.Payment = mutate(&payment, i)
-		items := make([]Item, len(template.Items))
+		items := make([]model.Item, len(template.Items))
 		for _, v := range items {
 			item := mutate(&v, i)
 			items = append(items, item)

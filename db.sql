@@ -1,5 +1,7 @@
+DROP TABLE IF EXISTS orders CASCADE;
+
 CREATE TABLE IF NOT EXISTS orders (
-    order_uid VARCHAR(255) PRIMARY KEY,
+    order_uid VARCHAR(255) PRIMARY KEY UNIQUE,
     track_number VARCHAR(255),
     entry VARCHAR(255),
     locale VARCHAR(255),
@@ -11,6 +13,8 @@ CREATE TABLE IF NOT EXISTS orders (
     date_created TIMESTAMP,
     oof_shard VARCHAR(255)
 );
+
+DROP TABLE IF EXISTS delivery CASCADE;
 
 CREATE TABLE IF NOT EXISTS delivery (
     id SERIAL PRIMARY KEY,
@@ -24,8 +28,10 @@ CREATE TABLE IF NOT EXISTS delivery (
     email VARCHAR(255)
     );
 
+DROP TABLE IF EXISTS payment CASCADE;
+
 CREATE TABLE IF NOT EXISTS payment (
-    transaction VARCHAR(255) PRIMARY KEY,
+    transaction VARCHAR(255) PRIMARY KEY UNIQUE,
     order_uid VARCHAR(255) REFERENCES orders(order_uid) ON DELETE CASCADE,
     request_id VARCHAR(255),
     currency VARCHAR(255),
@@ -38,9 +44,11 @@ CREATE TABLE IF NOT EXISTS payment (
     custom_fee INTEGER
 );
 
+DROP TABLE IF EXISTS item CASCADE;
+
 -- could be composite primary key sql
 CREATE TABLE IF NOT EXISTS item (
-    chrt_id INTEGER PRIMARY KEY,
+    chrt_id INTEGER PRIMARY KEY UNIQUE,
     track_number VARCHAR(255),
     price INTEGER,
     rid VARCHAR(255),
@@ -51,6 +59,8 @@ CREATE TABLE IF NOT EXISTS item (
     brand VARCHAR(255),
     status INTEGER
 );
+
+DROP TABLE IF EXISTS order_item CASCADE;
 
 CREATE TABLE IF NOT EXISTS order_item (
     id SERIAL PRIMARY KEY,
@@ -118,6 +128,8 @@ BEGIN
             delivery_cost, goods_total, custom_fee);
 END$$;
 
+DROP PROCEDURE IF EXISTS add_order_item(character varying,integer,integer,character varying,integer,character varying,character varying,character varying,integer,integer,character varying,integer);
+
 CREATE OR REPLACE PROCEDURE add_order_item(
     order_uid VARCHAR(255),
     sale INTEGER,
@@ -169,8 +181,10 @@ BEGIN
     LIMIT 1;
 END$$;
 
+DROP PROCEDURE IF EXISTS get_all_orders();
+
 CREATE OR REPLACE PROCEDURE get_all_orders()
-    LANGUAGE plpgsql
+LANGUAGE plpgsql
 AS $$
 BEGIN
     SELECT
