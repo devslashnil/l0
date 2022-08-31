@@ -1,0 +1,43 @@
+# docker-compose.yml
+version: "3.9"
+
+services:
+
+  # Services
+  publisher:
+    restart: always
+    build: ./cmd/publisher
+    ports:
+      - 50051:50051
+    environment:
+      MICRO_SERVER_ADDRESS: ":50051"
+      DB_HOST: "mongodb://datastore:27017"
+
+  subscriber:
+    restart: always
+    build: ./cmd/subscriber
+    depends_on:
+      - subscriber
+      - postgres
+    ports:
+      - 50052:50051
+    environment:
+      MICRO_SERVER_ADDRESS: ":50051"
+      DB_HOST: "mongodb://datastore:27017"
+
+  # Commands
+  cli:
+    build: ./shippy-cli-consignment
+
+  # Database tier
+  postgres:
+    image: postgres
+    container_name: "datastore"
+    environment:
+      - MONGO_DATA_DIR=/data/db
+      - MONGO_LOG_DIR=/dev/null
+    volumes:
+      - ./data/db:/data/db # ensures data persistence between restarting
+    ports:
+      - "5432:5432"
+    command: mongod --logpath=/dev/null

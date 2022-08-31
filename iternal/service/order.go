@@ -13,11 +13,11 @@ import (
 )
 
 type Order struct {
-	r *repository.OrderRepo
+	r *repository.Order
 	c *cache.Cache
 }
 
-func NewOrderService(c *cache.Cache, r *repository.OrderRepo) *Order {
+func NewOrderService(c *cache.Cache, r *repository.Order) *Order {
 	return &Order{r, c}
 }
 

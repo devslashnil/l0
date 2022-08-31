@@ -8,7 +8,7 @@ import (
 	"github.com/patrickmn/go-cache"
 )
 
-func InitCache(c *cache.Cache, r *repository.OrderRepo) *cache.Cache {
+func InitCache(c *cache.Cache, r *repository.Order) *cache.Cache {
 	orders, err := r.GetAllOrders()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Can't get all orders: %v", err)

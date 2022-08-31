@@ -85,7 +85,8 @@ CREATE OR REPLACE PROCEDURE add_order(
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    INSERT INTO orders
+    INSERT INTO orders(order_uid, track_number, entry, locale, internal_signature, customer_id,
+                       delivery_service, shardkey, sm_id, date_created, oof_shard)
     VALUES (order_uid, track_number, entry, locale, internal_signature, customer_id,
             delivery_service, shardkey, sm_id, date_created, oof_shard);
 END$$;
@@ -103,7 +104,7 @@ CREATE OR REPLACE PROCEDURE add_delivery(
     LANGUAGE plpgsql
 AS $$
 BEGIN
-    INSERT INTO delivery
+    INSERT INTO delivery(order_uid, name, phone, zip, city, address, region, email)
     VALUES (order_uid, name, phone, zip, city, address, region, email);
 END$$;
 
@@ -147,11 +148,11 @@ CREATE OR REPLACE PROCEDURE add_order_item(
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    INSERT INTO item
+    INSERT INTO item(chrt_id, track_number, price, rid, name, size, total_price, nm_id, brand, status)
     VALUES (chrt_id, track_number, price, rid, name, size, total_price, nm_id, brand, status)
     ON CONFLICT DO NOTHING;
 
-    INSERT INTO order_item
+    INSERT INTO order_item(chrt_id, order_uid, sale)
     VALUES (chrt_id, order_uid, sale)
     ON CONFLICT DO NOTHING;
 END$$;
@@ -190,7 +191,7 @@ BEGIN
     SELECT
         json_agg(
             json_build_object(
-                orders.*,
+                'order_uid', orders.order_uid,
                 'delivery', to_json(delivery.*),
                 'payment', to_json(payment.*),
                 'items', (SELECT json_agg(order_items.*)

@@ -24,7 +24,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	file, err := os.ReadFile("model.json")
+	file, err := os.ReadFile("./api/model.json")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -45,7 +45,7 @@ func main() {
 		case <-ticker.C:
 			fmt.Printf("foo publish: %d\n", i)
 			b, err := json.Marshal(orders[i])
-			fmt.Printf("json.Marshal(orders[i]): %s\n%v", b, orders[i])
+			//fmt.Printf("json.Marshal(orders[i]): %s\n%v", b, orders[i])
 			if err != nil {
 				log.Fatalln(err)
 			}

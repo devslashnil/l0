@@ -9,20 +9,20 @@ import (
 	"github.com/jackc/pgx/v4"
 )
 
-type OrderRepo struct {
+type Order struct {
 	conn *pgx.Conn
 }
 
-func NewOrderRepoFromUrl(url string) *OrderRepo {
+func NewOrderRepoFromUrl(url string) *Order {
 	conn, err := pgx.Connect(context.Background(), url)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
 	}
-	return &OrderRepo{conn}
+	return &Order{conn}
 }
 
-func (r *OrderRepo) Create(o *model.Order) error {
+func (r *Order) Create(o *model.Order) error {
 	fmt.Printf("Creating stuff: %v\n", o)
 	query := "CALL add_order($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);"
 	err := r.conn.QueryRow(
@@ -42,28 +42,32 @@ func (r *OrderRepo) Create(o *model.Order) error {
 	).Scan()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
-		return err
+		//return err
 	}
 	err = r.createDelivery(&o.Delivery, o.OrderUid)
 	if err != nil {
-		return err
+		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
+		//return err
 	}
 	err = r.createPayment(&o.Payment, o.OrderUid)
 	if err != nil {
-		return err
+		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
+		//return err
 	}
 	for _, item := range o.Items {
 		err = r.createItem(&item, o.OrderUid)
 		if err != nil {
-			return err
+			fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
+			//return err
 		}
 	}
 	// TODO: do rollback on error
 	return nil
 }
 
-func (r *OrderRepo) createDelivery(d *model.Delivery, OrderUid string) error {
-	query := "CALL add_payment($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);"
+func (r *Order) createDelivery(d *model.Delivery, OrderUid string) error {
+	fmt.Printf("HAHA: %v", d)
+	query := "CALL add_delivery($1, $2, $3, $4, $5, $6, $7, $8);"
 	err := r.conn.QueryRow(
 		context.Background(),
 		query,
@@ -77,14 +81,14 @@ func (r *OrderRepo) createDelivery(d *model.Delivery, OrderUid string) error {
 		d.Email,
 	).Scan()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
+		fmt.Fprintf(os.Stderr, "createDelivery QueryRow failed: %v\n", err)
 		return err
 	}
 	return nil
 }
 
-func (r *OrderRepo) createItem(i *model.Item, OrderUid string) error {
-	query := "CALL add_order_item($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);"
+func (r *Order) createItem(i *model.Item, OrderUid string) error {
+	query := "CALL add_order_item($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);"
 	err := r.conn.QueryRow(
 		context.Background(),
 		query,
@@ -107,7 +111,7 @@ func (r *OrderRepo) createItem(i *model.Item, OrderUid string) error {
 	return nil
 }
 
-func (r *OrderRepo) createPayment(p *model.Payment, OrderUid string) error {
+func (r *Order) createPayment(p *model.Payment, OrderUid string) error {
 	query := "CALL add_payment($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
 	err := r.conn.QueryRow(
 		context.Background(),
@@ -131,7 +135,7 @@ func (r *OrderRepo) createPayment(p *model.Payment, OrderUid string) error {
 	return nil
 }
 
-func (r *OrderRepo) GetOrder(uid string) (*model.Order, error) {
+func (r *Order) GetOrder(uid string) (*model.Order, error) {
 	var order model.Order
 	query := "CALL get_order( $1 );"
 	err := r.conn.QueryRow(context.Background(), query, uid).Scan(&order)
@@ -142,7 +146,7 @@ func (r *OrderRepo) GetOrder(uid string) (*model.Order, error) {
 	return &order, nil
 }
 
-func (r *OrderRepo) GetAllOrders() ([]*model.Order, error) {
+func (r *Order) GetAllOrders() ([]*model.Order, error) {
 	query := "CALL get_all_orders();"
 	rows, err := r.conn.Query(context.Background(), query)
 	if err != nil {
