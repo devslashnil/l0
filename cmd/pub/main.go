@@ -20,7 +20,7 @@ const (
 
 func main() {
 	fmt.Println("Publisher init")
-	sc, err := stan.Connect("test-cluster", "order-publish")
+	sc, err := stan.Connect("test-cluster", "order-pub")
 	if err != nil {
 		log.Fatal(err)
 	}

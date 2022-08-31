@@ -6,7 +6,7 @@ services:
   # Services
   publisher:
     restart: always
-    build: ./cmd/publisher
+    build: ./cmd/pub
     ports:
       - 50051:50051
     environment:
@@ -15,7 +15,7 @@ services:
 
   subscriber:
     restart: always
-    build: ./cmd/subscriber
+    build: ./cmd/sub
     depends_on:
       - subscriber
       - postgres
