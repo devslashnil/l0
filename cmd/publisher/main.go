@@ -22,17 +22,17 @@ func main() {
 	fmt.Println("Publisher init")
 	sc, err := stan.Connect("test-cluster", "order-publish")
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal(err)
 	}
 	file, err := os.ReadFile("model.json")
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal(err)
 	}
 	var order model.Order
 	err = json.Unmarshal(file, &order)
 	fmt.Printf("Unmarshal results: %s\n%v", order, order)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal(err)
 	}
 	// Tick return
 	orders := populateOrders(order, msgNum)
@@ -64,6 +64,7 @@ func main() {
 	}
 }
 
+// populateOrders create array of unique model.Order
 func populateOrders(template model.Order, l int) []model.Order {
 	orders := make([]model.Order, 0, l)
 	for i := 0; i < l; i++ {
@@ -82,7 +83,7 @@ func populateOrders(template model.Order, l int) []model.Order {
 	return orders
 }
 
-// mutate change a struct values
+// mutate change a struct of a and add num indexes
 func mutate[T any](a *T, num int) T {
 	v := reflect.Indirect(reflect.ValueOf(a))
 	for i := 0; i < v.NumField(); i++ {
