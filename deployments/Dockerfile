@@ -1,7 +1,7 @@
 FROM golang:alpine as builder
 
 RUN apk update && apk upgrade && \
-    apk add --no-cache git
+    apk add --no-util git
 
 RUN mkdir /app
 WORKDIR /app
@@ -16,7 +16,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o shippy-service-co
 
 FROM alpine:latest
 
-RUN apk --no-cache add ca-certificates
+RUN apk --no-util add ca-certificates
 
 RUN mkdir /app
 WORKDIR /app

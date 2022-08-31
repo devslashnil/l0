@@ -2,8 +2,9 @@ package sub
 
 import (
 	"fmt"
-	"l0/iternal/service"
 	"os"
+
+	"l0/iternal/service"
 
 	"github.com/nats-io/stan.go"
 )

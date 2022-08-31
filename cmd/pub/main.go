@@ -3,12 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"l0/iternal/model"
 	"log"
 	"math/rand"
 	"os"
 	"reflect"
 	"time"
+
+	"l0/iternal/model"
 
 	stan "github.com/nats-io/stan.go"
 )

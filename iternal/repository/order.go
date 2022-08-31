@@ -3,8 +3,9 @@ package repository
 import (
 	"context"
 	"fmt"
-	"l0/iternal/model"
 	"os"
+
+	"l0/iternal/model"
 
 	"github.com/jackc/pgx/v4"
 )
@@ -88,7 +89,7 @@ func (r *Order) createDelivery(d *model.Delivery, OrderUid string) error {
 }
 
 func (r *Order) createItem(i *model.Item, OrderUid string) error {
-	query := "CALL add_order_item($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);"
+	query := "CALL add_order_item($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);"
 	err := r.conn.QueryRow(
 		context.Background(),
 		query,
@@ -97,8 +98,9 @@ func (r *Order) createItem(i *model.Item, OrderUid string) error {
 		i.ChrtId,
 		i.TrackNumber,
 		i.Price,
-		i.Rid,
 		i.Name,
+		i.Rid,
+		i.Size,
 		i.TotalPrice,
 		i.NmId,
 		i.Brand,
@@ -152,6 +154,7 @@ func (r *Order) GetAllOrders() ([]*model.Order, error) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "get_all_orders failed: %v\n", err)
 	}
+	fmt.Println("rows", rows)
 	orders := make([]*model.Order, 0)
 	for rows.Next() {
 		var order model.Order

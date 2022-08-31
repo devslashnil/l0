@@ -3,10 +3,11 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"l0/iternal/model"
-	"l0/iternal/repository"
 	"log"
 	"os"
+
+	"l0/iternal/model"
+	"l0/iternal/repository"
 
 	"github.com/nats-io/stan.go"
 	"github.com/patrickmn/go-cache"
@@ -44,7 +45,7 @@ func (so *Order) GetByUid(uid string) ([]byte, bool) {
 	}
 	b, ok := o.([]byte)
 	if !ok {
-		log.Fatalf("If there isn't []byte in cache than what is it: %T?", o)
+		log.Fatalf("If there isn't []byte in util than what is it: %T?", o)
 		return nil, ok
 	}
 	return b, true
