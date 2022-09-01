@@ -11,7 +11,7 @@ ENV GO111MODULE=on
 COPY . .
 
 RUN go mod download
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o shippy-service-consignment
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o sub .\\cmd\\sub\\main.go
 
 
 FROM alpine:latest
@@ -20,7 +20,6 @@ RUN apk --no-util add ca-certificates
 
 RUN mkdir /app
 WORKDIR /app
-ADD consignment.json /app/consignment.json
-COPY --from=builder /app/shippy-cli-consignment .
+COPY --from=builder /app/sub .
 
-CMD ["./shippy-cli-consignment"]
+CMD ["./sub"]

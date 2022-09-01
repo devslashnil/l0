@@ -4,40 +4,60 @@ version: "3.9"
 services:
 
   # Services
-  publisher:
+  pub:
     restart: always
-    build: ./cmd/pub
+    build:
+      context: .
+      dockerfile: pub.Dockerfile
+    networks:
+      - default
     ports:
       - 50051:50051
-    environment:
-      MICRO_SERVER_ADDRESS: ":50051"
-      DB_HOST: "mongodb://datastore:27017"
 
-  subscriber:
+  sub:
     restart: always
-    build: ./cmd/sub
+    build:
+      context: .
+      dockerfile: sub.Dockerfile
+    env_file: .env
     depends_on:
       - subscriber
-      - postgres
+      - datastore
+    networks:
+      - default
     ports:
       - 50052:50051
-    environment:
-      MICRO_SERVER_ADDRESS: ":50051"
-      DB_HOST: "mongodb://datastore:27017"
 
   # Commands
   cli:
     build: ./shippy-cli-consignment
 
   # Database tier
-  postgres:
+  datastore:
     image: postgres
     container_name: "datastore"
     environment:
-      - MONGO_DATA_DIR=/data/db
-      - MONGO_LOG_DIR=/dev/null
+      POSTGRES_DB: "postgres"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "pass"
     volumes:
-      - ./data/db:/data/db # ensures data persistence between restarting
+      - ../2. Init Database:/docker-entrypoint-initdb.d
+      - .:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-    command: mongod --logpath=/dev/null
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 4G
+
+networks:
+  postgres:
+    driver: bridge
