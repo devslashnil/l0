@@ -185,6 +185,8 @@ BEGIN
     LIMIT 1;
 END$$;
 
+DROP PROCEDURE IF EXISTS get_all_orders();
+
 DROP FUNCTION IF EXISTS get_all_orders();
 
 CREATE OR REPLACE FUNCTION get_all_orders()
@@ -193,7 +195,9 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
 RETURN QUERY
-  SELECT
+    -- little bit cumbersome and not flexible at terms of future update of fields
+    -- great overhead
+    SELECT
     json_build_object(
         -- array of items
         'items', (SELECT json_agg(order_items.*)
@@ -203,10 +207,19 @@ RETURN QUERY
                WHERE order_item.order_uid = orders.order_uid
                  AND order_item.chrt_id = item.chrt_id) as order_items),
         -- orders fields
-        'order_uid', orders.order_uid,
-        ,
         'delivery', to_json(delivery.*),
-        'payment', to_json(payment.*)
+        'payment', to_json(payment.*),
+        'order_uid', orders.order_uid,
+        'track_number', orders.track_number,
+        'entry', orders.entry,
+        'locale', orders.locale,
+        'internal_signature', orders.internal_signature,
+        'customer_id', orders.customer_id,
+        'delivery_service', orders.delivery_service,
+        'shardkey', orders.shardkey,
+        'sm_id', orders.sm_id,
+        'date_created', orders.date_created,
+        'oof_shard', orders.oof_shard
     )
     FROM orders,
          payment,

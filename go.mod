@@ -4,7 +4,6 @@ go 1.19
 
 require (
 	github.com/jackc/pgx/v4 v4.17.0
-	github.com/joho/godotenv v1.4.0
 	github.com/nats-io/stan.go v0.10.3
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 )

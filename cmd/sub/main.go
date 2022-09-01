@@ -13,12 +13,11 @@ import (
 	"l0/iternal/sub"
 	"l0/iternal/util"
 
-	"github.com/joho/godotenv"
 	"github.com/patrickmn/go-cache"
 )
 
 func main() {
-	godotenv.Load()
+	util.LoadEnv(".env")
 	r := repository.NewOrderRepoFromUrl(os.Getenv("DATABASE_URL"))
 	c := cache.New(5*time.Minute, 10*time.Minute)
 	util.InitCache(c, r)
