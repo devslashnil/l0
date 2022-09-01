@@ -26,13 +26,14 @@ func (so *Order) SaveFromMsg(m *stan.Msg) {
 	var o model.Order
 	err := json.Unmarshal(m.Data, &o)
 	if err != nil {
+		// При получение невалидных данных обрабатывем их другим хэндлером и не производим сохранение в базу и кэш
 		so.handleUnknownMsg(m)
+		return
 	}
 	err = so.r.Create(&o)
 	if err != nil {
-		// todo: gracefully handle
 		log.Fatal(err)
-		return
+		// Чтобы не потерять данные из-за сбоя базы, продолжаем поток выполнения и сохраняем in-memory
 	}
 	so.c.Set(o.OrderUid, m.Data, cache.DefaultExpiration)
 	fmt.Fprintf(os.Stdout, "Next order_uid saved to util: %v", o.OrderUid)
@@ -48,18 +49,8 @@ func (so *Order) GetByUid(uid string) (*model.Order, bool) {
 		return nil, false
 	}
 	return o, true
-	//fmt.Println(o, ok)
-	//if !ok {
-	//	return nil, ok
-	//}
-	//b, err := json.Marshal(o)
-	//if err != nil {
-	//	log.Fatal(err)
-	//	return nil, ok
-	//}
-	//return b, true
 }
 
 func (so *Order) handleUnknownMsg(m *stan.Msg) {
-	// todo: cry loudly
+	log.Printf("Got unsuported data from order-pub: %v", m.Data)
 }

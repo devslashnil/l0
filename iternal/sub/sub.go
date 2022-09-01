@@ -21,8 +21,6 @@ func NewStanConn() *stan.Conn {
 
 func NewOrderMsgHandler(so *service.Order) func(*stan.Msg) {
 	return func(m *stan.Msg) {
-		// todo: log instead print
-		fmt.Printf("Got message: %s", m.Data)
 		so.SaveFromMsg(m)
 	}
 }
