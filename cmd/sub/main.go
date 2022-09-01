@@ -8,14 +8,14 @@ import (
 	"l0/iternal/sub"
 	"l0/iternal/util"
 	"net/http"
+	"os"
 
 	"github.com/patrickmn/go-cache"
 )
 
 func main() {
-	//util.LoadEnv(".env")
-	//r := repository.NewOrderRepoFromUrl(os.Getenv("DATABASE_URL"))
-	r := repository.NewOrderRepoFromUrl("postgres://postgres:pass@datastore:5432/postgres")
+	util.LoadEnv(".env")
+	r := repository.NewOrderRepoFromUrl(os.Getenv("DATABASE_URL"))
 	c := cache.New(cache.NoExpiration, cache.NoExpiration)
 	util.InitCache(c, r)
 	so := service.NewOrderService(c, r)

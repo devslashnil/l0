@@ -25,16 +25,9 @@ func NewRoot(so *service.Order) func(http.ResponseWriter, *http.Request) {
 			}{"По такому id ничего не найдено"})
 			return
 		}
-		//w.WriteHeader(http.StatusOK)
-		//http.ServeFile(w, r, "./web/index.html")
 		b, _ := json.MarshalIndent(*o, "", "\t")
 		tmpl.Execute(w, struct {
 			Data string
 		}{Data: string(b)})
-		//w.Header().Set("Content-Type", "text/html")
-		//err := json.NewEncoder(w).Encode(b)
-		//if err != nil {
-		//	return
-		//}
 	}
 }

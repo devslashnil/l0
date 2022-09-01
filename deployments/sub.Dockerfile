@@ -18,6 +18,7 @@ FROM gcr.io/distroless/base-debian10
 
 WORKDIR /
 
+COPY ./web ./web
 COPY .env ./
 COPY --from=build /sub /sub
 

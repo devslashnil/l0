@@ -18,6 +18,7 @@ FROM gcr.io/distroless/base-debian10
 
 WORKDIR /
 
+COPY ./api/model.json ./api/model.json
 COPY --from=build /pub /pub
 
 EXPOSE 8080

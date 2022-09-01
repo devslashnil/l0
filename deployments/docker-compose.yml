@@ -11,8 +11,7 @@ services:
       dockerfile: ./deployments/pub.Dockerfile
     depends_on:
       - nats-streaming
-    networks:
-      - common-net
+    network_mode: host
     ports:
       - 50051:50051
 
@@ -25,20 +24,18 @@ services:
     depends_on:
       - datastore
       - nats-streaming
-    networks:
-      - common-net
+    network_mode: host
     ports:
-      - 50052:50051
+      - 8080:8080
 
   # Nats streaming server
   nats-streaming:
     image: nats-streaming:alpine
-    networks:
-      - common-net
+    network_mode: host
     expose:
       - 4222
     ports:
-      - 8223:8223
+      - 8222:8222
 
   # Database tier
   datastore:
@@ -50,14 +47,10 @@ services:
       POSTGRES_DB: "postgres"
       POSTGRES_USER: "postgres"
       POSTGRES_PASSWORD: "pass"
-    networks:
-      - common-net
+    network_mode: host
     ports:
       - "5432:5432"
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
       # copy the sql script to create tables
       - ../scripts/db.sql:/docker-entrypoint-initdb.d/create_tables.sql
-
-networks:
-  common-net: {}

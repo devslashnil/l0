@@ -43,31 +43,29 @@ func (r *Order) Create(o *model.Order) error {
 	).Scan()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
-		//return err
+		return err
 	}
 	err = r.createDelivery(&o.Delivery, o.OrderUid)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
-		//return err
+		return err
 	}
 	err = r.createPayment(&o.Payment, o.OrderUid)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
-		//return err
+		return err
 	}
 	for _, item := range o.Items {
 		err = r.createItem(&item, o.OrderUid)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
-			//return err
+			return err
 		}
 	}
-	// TODO: do rollback on error
 	return nil
 }
 
 func (r *Order) createDelivery(d *model.Delivery, OrderUid string) error {
-	fmt.Printf("HAHA: %v", d)
 	query := "CALL add_delivery($1, $2, $3, $4, $5, $6, $7, $8);"
 	err := r.conn.QueryRow(
 		context.Background(),
