@@ -1,5 +1,5 @@
 # docker-compose.yml
-version: "3.9"
+version: "3.8"
 
 services:
 
@@ -7,57 +7,57 @@ services:
   pub:
     restart: always
     build:
-      context: .
-      dockerfile: pub.Dockerfile
+      context: ../
+      dockerfile: ./deployments/pub.Dockerfile
+    depends_on:
+      - nats-streaming
     networks:
-      - default
+      - common-net
     ports:
       - 50051:50051
 
   sub:
     restart: always
     build:
-      context: .
-      dockerfile: sub.Dockerfile
-    env_file: .env
+      context: ../
+      dockerfile: ./deployments/sub.Dockerfile
+    env_file: ../.env
     depends_on:
-      - subscriber
       - datastore
+      - nats-streaming
     networks:
-      - default
+      - common-net
     ports:
       - 50052:50051
 
-  # Commands
-  cli:
-    build: ./shippy-cli-consignment
+  # Nats streaming server
+  nats-streaming:
+    image: nats-streaming:alpine
+    networks:
+      - common-net
+    expose:
+      - 4222
+    ports:
+      - 8223:8223
 
   # Database tier
   datastore:
-    image: postgres
+    image: postgres:14.5
     container_name: "datastore"
+    restart: always
     environment:
+      PGHOST: "datastore"
       POSTGRES_DB: "postgres"
       POSTGRES_USER: "postgres"
       POSTGRES_PASSWORD: "pass"
-    volumes:
-      - ../2. Init Database:/docker-entrypoint-initdb.d
-      - .:/var/lib/postgresql/data
+    networks:
+      - common-net
     ports:
       - "5432:5432"
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d postgres" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 4G
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+      # copy the sql script to create tables
+      - ../scripts/db.sql:/docker-entrypoint-initdb.d/create_tables.sql
 
 networks:
-  postgres:
-    driver: bridge
+  common-net: {}

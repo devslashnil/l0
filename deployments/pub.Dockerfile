@@ -1,26 +1,27 @@
-FROM golang:alpine as builder
+# syntax=docker/dockerfile:1
 
-RUN apk update && apk upgrade && \
-    apk add --no-util git
+## Build
+FROM golang:1.19-buster AS build
 
-RUN mkdir /app
 WORKDIR /app
 
-ENV GO111MODULE=on
-
-COPY . .
-
+COPY go.mod ./
+COPY go.sum ./
 RUN go mod download
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o pub .\\cmd\\sub\\main.go
 
+COPY ./ ./
 
-FROM alpine:latest
+RUN go build -o /pub ./cmd/pub/main.go
 
-RUN apk --no-util add ca-certificates
+## Deploy
+FROM gcr.io/distroless/base-debian10
 
-RUN mkdir /app
-WORKDIR /app
-ADD ./api/model.json /app/consignment.json
-COPY --from=builder /app/pub .
+WORKDIR /
 
-CMD ["./pub"]
+COPY --from=build /pub /pub
+
+EXPOSE 8080
+
+USER nonroot:nonroot
+
+ENTRYPOINT ["/pub"]
