@@ -24,7 +24,6 @@ func NewOrderRepoFromUrl(url string) *Order {
 }
 
 func (r *Order) Create(o *model.Order) error {
-	fmt.Printf("Creating stuff: %v\n", o)
 	query := "CALL add_order($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);"
 	err := r.conn.QueryRow(
 		context.Background(),
@@ -43,23 +42,19 @@ func (r *Order) Create(o *model.Order) error {
 	).Scan()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
-		//return err
 	}
 	err = r.createDelivery(&o.Delivery, o.OrderUid)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
-		//return err
 	}
 	err = r.createPayment(&o.Payment, o.OrderUid)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
-		//return err
 	}
 	for _, item := range o.Items {
 		err = r.createItem(&item, o.OrderUid)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
-			//return err
 		}
 	}
 	return nil
@@ -80,7 +75,7 @@ func (r *Order) createDelivery(d *model.Delivery, OrderUid string) error {
 		d.Email,
 	).Scan()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "createDelivery QueryRow failed: %v\n", err)
+		//fmt.Fprintf(os.Stderr, "createDelivery QueryRow failed: %v\n", err)
 		return err
 	}
 	return nil
@@ -105,7 +100,7 @@ func (r *Order) createItem(i *model.Item, OrderUid string) error {
 		i.Status,
 	).Scan()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
+		//fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
 		return err
 	}
 	return nil
@@ -129,7 +124,7 @@ func (r *Order) createPayment(p *model.Payment, OrderUid string) error {
 		p.CustomFee,
 	).Scan()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
+		//fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
 		return err
 	}
 	return nil
@@ -140,7 +135,7 @@ func (r *Order) GetOrder(uid string) (*model.Order, error) {
 	query := "CALL get_order( $1 );"
 	err := r.conn.QueryRow(context.Background(), query, uid).Scan(&order)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
+		//fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
 		return &order, err
 	}
 	return &order, nil

@@ -9,6 +9,7 @@ import (
 	"l0/iternal/util"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/patrickmn/go-cache"
 )
@@ -16,7 +17,7 @@ import (
 func main() {
 	util.LoadEnv(".env")
 	r := repository.NewOrderRepoFromUrl(os.Getenv("DATABASE_URL"))
-	c := cache.New(cache.NoExpiration, cache.NoExpiration)
+	c := cache.New(5*time.Minute, 10*time.Minute)
 	util.InitCache(c, r)
 	so := service.NewOrderService(c, r)
 	sc := sub.NewStanConn()

@@ -35,8 +35,8 @@ func (so *Order) SaveFromMsg(m *stan.Msg) {
 		log.Fatal(err)
 		// Чтобы не потерять данные из-за сбоя базы, продолжаем поток выполнения и сохраняем in-memory
 	}
-	so.c.Set(o.OrderUid, m.Data, cache.DefaultExpiration)
-	fmt.Fprintf(os.Stdout, "Next order_uid saved to util: %v", o.OrderUid)
+	so.c.Set(o.OrderUid, &o, cache.NoExpiration)
+	fmt.Fprintf(os.Stdout, "Next order_uid saved to util: %v\n", o.OrderUid)
 }
 
 func (so *Order) GetByUid(uid string) (*model.Order, bool) {
@@ -44,7 +44,7 @@ func (so *Order) GetByUid(uid string) (*model.Order, bool) {
 	if !ok {
 		return nil, false
 	}
-	fmt.Fprintf(os.Stdout, "order_uid: %v are got from cache", uid)
+	fmt.Fprintf(os.Stdout, "order_uid: %v are got from cache\n", uid)
 	o, ok := i.(*model.Order)
 	if !ok {
 		return nil, false
