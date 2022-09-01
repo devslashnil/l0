@@ -38,18 +38,26 @@ func (so *Order) SaveFromMsg(m *stan.Msg) {
 	fmt.Fprintf(os.Stdout, "Next order_uid saved to util: %v", o.OrderUid)
 }
 
-func (so *Order) GetByUid(uid string) ([]byte, bool) {
-	o, ok := so.c.Get(uid)
-	fmt.Println(o, ok)
+func (so *Order) GetByUid(uid string) (*model.Order, bool) {
+	i, ok := so.c.Get(uid)
 	if !ok {
-		return nil, ok
+		return nil, false
 	}
-	b, err := json.Marshal(o)
-	if err != nil {
-		log.Fatal(err)
-		return nil, ok
+	o, ok := i.(*model.Order)
+	if !ok {
+		return nil, false
 	}
-	return b, true
+	return o, true
+	//fmt.Println(o, ok)
+	//if !ok {
+	//	return nil, ok
+	//}
+	//b, err := json.Marshal(o)
+	//if err != nil {
+	//	log.Fatal(err)
+	//	return nil, ok
+	//}
+	//return b, true
 }
 
 func (so *Order) handleUnknownMsg(m *stan.Msg) {

@@ -1,10 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+	<meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+	<link rel="canonical" href="https://html5-templates.com/" />
+	<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+	<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+	<script src="assets/script.js"></script>
+	<link rel="stylesheet" type="text/css" href="assets/style.css" />
+	<title>Windows Template</title>
 </head>
 <body>
-    <h1>Alive</h1>
+	<div id="desktop">
+		<div class="window" data-title="Добро пожаловать!">
+			<h1>Задание уровнея L0</h1>
+			<p>Вас приветствует простейший интерфейс отображения полученных данных, для
+				их запроса по id </p>
+			<p>Нажмите на понравившийся id для подругзки данных с заказом</p>
+			<ul>
+				<li><a href="?order_uid=3-i-b563feb7b2b84b6test">order_uid=3-i-b563feb7b2b84b6test</a></li>
+				<li></li>
+				<li><a href="?order_uid=5-i-b563feb7b2b84b6test">order_uid=5-i-b563feb7b2b84b6test</a></li>
+				<li></li>
+				<li><a href="?order_uid=unknown">order_uid=unknown</a></li>
+			</ul>
+
+			<hr />
+			<pre class="tab">
+				{{ .Data }}
+			</pre>
+
+		</div>
+
+		<div id="taskbar">
+		</div>
+
+		<div id="icons">
+			<a class="openWindow" data-id="0">Открыть главное окно</a>
+		</div>
+		<a href="https://html5-templates.com/" rel="nofollow" target="_blank" id="templateLink">&copy; HTML5-Templates.com</a>	
+		<!-- You can use this template freely if you leave a visible link to HTML5-Templates.com -->
+	</div>
 </body>
+
 </html>

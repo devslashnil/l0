@@ -2,12 +2,11 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"l0/iternal/handler"
 	"net/http"
 	"os"
 	"time"
 
-	"l0/iternal/handler"
 	"l0/iternal/repository"
 	"l0/iternal/service"
 	"l0/iternal/sub"
@@ -24,11 +23,8 @@ func main() {
 	so := service.NewOrderService(c, r)
 	sc := sub.NewStanConn()
 	sub.Subscribe(sc, "order", sub.NewOrderMsgHandler(so))
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", handler.NewRoot(so))
+	http.HandleFunc("/", handler.NewRoot(so))
+	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("./web/assets"))))
 	fmt.Printf("Starting server at port 8080\n")
-	if err := http.ListenAndServe(":8080", mux); err != nil {
-		log.Fatal(err)
-		os.Exit(1)
-	}
+	http.ListenAndServe(":8080", nil)
 }
