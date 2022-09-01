@@ -44,6 +44,7 @@ func (so *Order) GetByUid(uid string) (*model.Order, bool) {
 	if !ok {
 		return nil, false
 	}
+	fmt.Fprintf(os.Stdout, "order_uid: %v are got from cache", uid)
 	o, ok := i.(*model.Order)
 	if !ok {
 		return nil, false

@@ -31,7 +31,7 @@ func main() {
 	}
 	var order model.Order
 	err = json.Unmarshal(file, &order)
-	fmt.Printf("Unmarshal results: %s\n%v", order, order)
+	//fmt.Printf("Unmarshal results: %s\n%v", order, order)
 	if err != nil {
 		log.Fatal(err)
 	}
