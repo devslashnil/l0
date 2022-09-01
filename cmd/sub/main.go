@@ -23,7 +23,7 @@ func main() {
 	util.InitCache(c, r)
 	so := service.NewOrderService(c, r)
 	sc := sub.NewStanConn()
-	(*sc).Subscribe("order", sub.NewOrderMsgHandler(so))
+	sub.Subscribe(sc, "order", sub.NewOrderMsgHandler(so))
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handler.NewRoot(so))
 	fmt.Printf("Starting server at port 8080\n")

@@ -40,12 +40,13 @@ func (so *Order) SaveFromMsg(m *stan.Msg) {
 
 func (so *Order) GetByUid(uid string) ([]byte, bool) {
 	o, ok := so.c.Get(uid)
+	fmt.Println(o, ok)
 	if !ok {
 		return nil, ok
 	}
-	b, ok := o.([]byte)
-	if !ok {
-		log.Fatalf("If there isn't []byte in util than what is it: %T?", o)
+	b, err := json.Marshal(o)
+	if err != nil {
+		log.Fatal(err)
 		return nil, ok
 	}
 	return b, true

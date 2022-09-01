@@ -2,6 +2,7 @@ package sub
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"l0/iternal/service"
@@ -23,5 +24,12 @@ func NewOrderMsgHandler(so *service.Order) func(*stan.Msg) {
 		// todo: log instead print
 		fmt.Printf("Got message: %s", m.Data)
 		so.SaveFromMsg(m)
+	}
+}
+
+func Subscribe(sc *stan.Conn, subject string, msgHandler func(*stan.Msg)) {
+	_, err := (*sc).Subscribe(subject, msgHandler)
+	if err != nil {
+		log.Fatal(err)
 	}
 }

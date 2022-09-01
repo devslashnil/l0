@@ -12,7 +12,7 @@ func NewRoot(so *service.Order) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		orderUid := r.URL.Query().Get("order_uid")
 		b, ok := so.GetByUid(orderUid)
-		fmt.Println("order_uid:", orderUid, string(b))
+		fmt.Println("new root response:", string(b))
 		if !ok {
 			//w.WriteHeader(http.StatusNotFound)
 			//return

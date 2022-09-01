@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS orders (
     delivery_service VARCHAR(255),
     shardkey VARCHAR(255),
     sm_id INTEGER,
-    date_created TIMESTAMP,
+    date_created TIMESTAMP WITH TIME ZONE,
     oof_shard VARCHAR(255)
 );
 
@@ -79,7 +79,7 @@ CREATE OR REPLACE PROCEDURE add_order(
     delivery_service VARCHAR(255),
     shardkey VARCHAR(255),
     sm_id INTEGER,
-    date_created TIMESTAMP,
+    date_created TIMESTAMP WITH TIME ZONE,
     oof_shard VARCHAR(255)
 )
 LANGUAGE plpgsql
@@ -157,8 +157,6 @@ BEGIN
     ON CONFLICT DO NOTHING;
 END$$;
 
-CALL get_all_orders();
-
 CREATE OR REPLACE FUNCTION get_order(uid VARCHAR(255))
 RETURNS TABLE(json_build_object json)
 LANGUAGE plpgsql
@@ -184,8 +182,6 @@ BEGIN
             delivery.order_uid = orders.order_uid
     LIMIT 1;
 END$$;
-
-DROP PROCEDURE IF EXISTS get_all_orders();
 
 DROP FUNCTION IF EXISTS get_all_orders();
 

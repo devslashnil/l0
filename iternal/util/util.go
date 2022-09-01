@@ -18,6 +18,7 @@ func InitCache(c *cache.Cache, r *repository.Order) *cache.Cache {
 		fmt.Fprintf(os.Stderr, "Can't get all orders: %v", err)
 	}
 	for _, order := range orders {
+		fmt.Println(order)
 		c.Set(order.OrderUid, order, cache.DefaultExpiration)
 	}
 	fmt.Fprintf(os.Stdout, "Cache recovered\n")
