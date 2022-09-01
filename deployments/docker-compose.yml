@@ -1,0 +1,56 @@
+# docker-compose.yml
+version: "3.8"
+
+services:
+
+  # Services
+  pub:
+    restart: always
+    build:
+      context: ../
+      dockerfile: ./deployments/pub.Dockerfile
+    depends_on:
+      - nats-streaming
+    network_mode: host
+    ports:
+      - 50051:50051
+
+  sub:
+    restart: always
+    build:
+      context: ../
+      dockerfile: ./deployments/sub.Dockerfile
+    env_file: ../.env
+    depends_on:
+      - datastore
+      - nats-streaming
+    network_mode: host
+    ports:
+      - 8080:8080
+
+  # Nats streaming server
+  nats-streaming:
+    image: nats-streaming:alpine
+    network_mode: host
+    expose:
+      - 4222
+    ports:
+      - 8222:8222
+
+  # Database tier
+  datastore:
+    image: postgres:14.5
+    container_name: "datastore"
+    restart: always
+    environment:
+      PGHOST: "datastore"
+      POSTGRES_DB: "postgres"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "pass"
+    network_mode: host
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+      # copy the sql script to create tables
+      - ../scripts/db.sql:/docker-entrypoint-initdb.d/create_tables.sql

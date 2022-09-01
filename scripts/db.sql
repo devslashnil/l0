@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS orders (
     delivery_service VARCHAR(255),
     shardkey VARCHAR(255),
     sm_id INTEGER,
-    date_created TIMESTAMP,
+    date_created TIMESTAMP WITH TIME ZONE,
     oof_shard VARCHAR(255)
 );
 
@@ -79,13 +79,14 @@ CREATE OR REPLACE PROCEDURE add_order(
     delivery_service VARCHAR(255),
     shardkey VARCHAR(255),
     sm_id INTEGER,
-    date_created TIMESTAMP,
+    date_created TIMESTAMP WITH TIME ZONE,
     oof_shard VARCHAR(255)
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    INSERT INTO orders
+    INSERT INTO orders(order_uid, track_number, entry, locale, internal_signature, customer_id,
+                       delivery_service, shardkey, sm_id, date_created, oof_shard)
     VALUES (order_uid, track_number, entry, locale, internal_signature, customer_id,
             delivery_service, shardkey, sm_id, date_created, oof_shard);
 END$$;
@@ -103,7 +104,7 @@ CREATE OR REPLACE PROCEDURE add_delivery(
     LANGUAGE plpgsql
 AS $$
 BEGIN
-    INSERT INTO delivery
+    INSERT INTO delivery(order_uid, name, phone, zip, city, address, region, email)
     VALUES (order_uid, name, phone, zip, city, address, region, email);
 END$$;
 
@@ -147,61 +148,78 @@ CREATE OR REPLACE PROCEDURE add_order_item(
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    INSERT INTO item
+    INSERT INTO item(chrt_id, track_number, price, rid, name, size, total_price, nm_id, brand, status)
     VALUES (chrt_id, track_number, price, rid, name, size, total_price, nm_id, brand, status)
     ON CONFLICT DO NOTHING;
 
-    INSERT INTO order_item
+    INSERT INTO order_item(chrt_id, order_uid, sale)
     VALUES (chrt_id, order_uid, sale)
     ON CONFLICT DO NOTHING;
 END$$;
 
-CREATE OR REPLACE PROCEDURE get_order(uid VARCHAR(255))
-    LANGUAGE plpgsql
-AS $$
-BEGIN
-    SELECT
-        json_build_object(
-            orders.*,
-            'delivery', to_json(delivery.*),
-            'payment', to_json(payment.*),
-            'items', (SELECT json_agg(order_items.*)
-                      FROM (SELECT item.*, order_item.sale
-                            FROM order_item,
-                                 item
-                            WHERE order_item.order_uid = uid
-                              AND order_item.chrt_id = item.chrt_id) as order_items)
-        )
-    FROM orders,
-         payment,
-         delivery
-    WHERE orders.order_uid = uid AND
-          delivery.order_uid = uid AND
-          payment.order_uid = uid
-    LIMIT 1;
-END$$;
-
-DROP PROCEDURE IF EXISTS get_all_orders();
-
-CREATE OR REPLACE PROCEDURE get_all_orders()
+CREATE OR REPLACE FUNCTION get_order(uid VARCHAR(255))
+RETURNS TABLE(json_build_object json)
 LANGUAGE plpgsql
 AS $$
 BEGIN
     SELECT
-        json_agg(
-            json_build_object(
-                orders.*,
-                'delivery', to_json(delivery.*),
-                'payment', to_json(payment.*),
-                'items', (SELECT json_agg(order_items.*)
-                          FROM (SELECT item.*, order_item.sale
-                                FROM order_item,
-                                     item
-                                WHERE order_item.order_uid = orders.order_uid
-                                  AND order_item.chrt_id = item.chrt_id) as order_items)
-            )
-        )
+        -- array of items
+        (SELECT json_agg(order_items.*)
+         FROM (SELECT item.*, order_item.sale
+               FROM order_item,
+                    item
+               WHERE order_item.order_uid = orders.order_uid
+                 AND order_item.chrt_id = item.chrt_id) as order_items) as items,
+        -- orders fields
+        orders.*,
+        to_json(delivery.*) as delivery,
+        to_json(payment.*) as payment
     FROM orders,
          payment,
-         delivery;
+         delivery
+    WHERE orders.order_uid = uid AND
+            payment.order_uid = orders.order_uid AND
+            delivery.order_uid = orders.order_uid
+    LIMIT 1;
+END$$;
+
+DROP FUNCTION IF EXISTS get_all_orders();
+
+CREATE OR REPLACE FUNCTION get_all_orders()
+RETURNS TABLE(json_build_object json)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+RETURN QUERY
+    -- little bit cumbersome and not flexible at terms of future update of fields
+    -- great overhead
+    SELECT
+    json_build_object(
+        -- array of items
+        'items', (SELECT json_agg(order_items.*)
+         FROM (SELECT item.*, order_item.sale
+               FROM order_item,
+                    item
+               WHERE order_item.order_uid = orders.order_uid
+                 AND order_item.chrt_id = item.chrt_id) as order_items),
+        -- orders fields
+        'delivery', to_json(delivery.*),
+        'payment', to_json(payment.*),
+        'order_uid', orders.order_uid,
+        'track_number', orders.track_number,
+        'entry', orders.entry,
+        'locale', orders.locale,
+        'internal_signature', orders.internal_signature,
+        'customer_id', orders.customer_id,
+        'delivery_service', orders.delivery_service,
+        'shardkey', orders.shardkey,
+        'sm_id', orders.sm_id,
+        'date_created', orders.date_created,
+        'oof_shard', orders.oof_shard
+    )
+    FROM orders,
+         payment,
+         delivery
+    WHERE payment.order_uid = orders.order_uid AND
+          delivery.order_uid = orders.order_uid;
 END$$;
