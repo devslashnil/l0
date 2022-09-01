@@ -26,7 +26,7 @@ func main() {
 	sc := sub.NewStanConn()
 	(*sc).Subscribe("order", sub.NewOrderMsgHandler(so))
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", handler.NewRootHandler(so))
+	mux.HandleFunc("/", handler.NewRoot(so))
 	fmt.Printf("Starting server at port 8080\n")
 	if err := http.ListenAndServe(":8080", mux); err != nil {
 		log.Fatal(err)

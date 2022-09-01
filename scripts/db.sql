@@ -157,8 +157,11 @@ BEGIN
     ON CONFLICT DO NOTHING;
 END$$;
 
-CREATE OR REPLACE PROCEDURE get_order(uid VARCHAR(255))
-    LANGUAGE plpgsql
+CALL get_all_orders();
+
+CREATE OR REPLACE FUNCTION get_order(uid VARCHAR(255))
+RETURNS TABLE(json_build_object json)
+LANGUAGE plpgsql
 AS $$
 BEGIN
     SELECT
@@ -182,13 +185,14 @@ BEGIN
     LIMIT 1;
 END$$;
 
-DROP PROCEDURE IF EXISTS get_all_orders();
+DROP FUNCTION IF EXISTS get_all_orders();
 
-CREATE OR REPLACE PROCEDURE get_all_orders()
-RETURNS TABLE
+CREATE OR REPLACE FUNCTION get_all_orders()
+RETURNS TABLE(json_build_object json)
 LANGUAGE plpgsql
 AS $$
 BEGIN
+RETURN QUERY
   SELECT
     json_build_object(
         -- array of items
@@ -199,7 +203,8 @@ BEGIN
                WHERE order_item.order_uid = orders.order_uid
                  AND order_item.chrt_id = item.chrt_id) as order_items),
         -- orders fields
-        'uid', orders.order_uid,
+        'order_uid', orders.order_uid,
+        ,
         'delivery', to_json(delivery.*),
         'payment', to_json(payment.*)
     )

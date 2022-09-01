@@ -149,12 +149,11 @@ func (r *Order) GetOrder(uid string) (*model.Order, error) {
 }
 
 func (r *Order) GetAllOrders() ([]*model.Order, error) {
-	query := "CALL get_all_orders();"
+	query := `SELECT "get_all_orders"();`
 	rows, err := r.conn.Query(context.Background(), query)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "get_all_orders failed: %v\n", err)
 	}
-	fmt.Println("rows", rows)
 	orders := make([]*model.Order, 0)
 	for rows.Next() {
 		var order model.Order
